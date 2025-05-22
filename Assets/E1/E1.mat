@@ -41,22 +41,22 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _DepthBlendAmount: 1.64
+    - _DepthBlendAmount: 2
     - _DepthEdgeWidth: 0.143
     - _DepthThreshold: 0.5
     - _Depth_Blend: 0.5
     - _EdgeSoftness: 0.5
-    - _FresnelExponent: 5.3
+    - _FresnelExponent: 6
     - _Fresnel_Power: 5
     - _GlowIntensity: 1
-    - _HexScrollSpeed: 0.232
-    - _IntersectWidth: 1
+    - _HexScrollSpeed: 0.4
+    - _IntersectWidth: 0.5
     - _Intersection_Width: 1
     - _NoiseScale: 1
-    - _ScanDensity: 200
+    - _ScanDensity: 50
     - _ScanLineFrequency: 100
     - _ScanLineStrength: 0.5
-    - _ScanSpeed: 50
+    - _ScanSpeed: 150
     - _ScanlineCount: 81
     - _ScanlineIntensity: 0.82
     - _Scanline_Density: 50

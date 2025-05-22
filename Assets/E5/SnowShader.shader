@@ -1,31 +1,22 @@
 Shader "Custom/SnowShader" {
     Properties {
         [Header(Tesselation)]
-        _MaxTessDistance("Max Tessellation Distance", Range(10, 100)) = 50
-        _Tess("Tessellation", Range(1, 32)) = 20
+        _MaxTessDistance("Max Tessellation Distance", Float) = 30
+        _Tess("Tessellation", Int) = 10
 
         [Space]
         [Header(Snow)]
-        _SnowHeight("Snow Height", Range(0,2)) = 0.3
-        _SnowDepth("Snow Path Depth", Range(-2,2)) = 0.3
+        _SnowHeight("Snow Height", Float) = 0.5
+        _SnowDepth("Snow Path Depth", Float) = 0.5
         
         [Header(Top)]
         _Top_Albedo("Top Albedo", 2D) = "white" {}
-        _Top_Normal("Top Normal", 2D) = "bump" {}
-        _Top_Mask("Top Mask", 2D) = "white" {}
 
         [Header(Middle)]
         _Middle_Albedo("Middle Albedo", 2D) = "white" {}
-        _Middle_Normal("Middle Normal", 2D) = "bump" {}
-        _Middle_Mask("Middle Mask", 2D) = "white" {}
 
         [Header(Bottom)]
         _Bottom_Albedo("Bottom Albedo", 2D) = "white" {}
-        _Bottom_Normal("Bottom Normal", 2D) = "bump" {}
-        _Bottom_Mask("Bottom Mask", 2D) = "white" {}
-        
-        [Space]
-        _Range("Blend Range", Range(0,1)) = 0.1
     }
 
     CGINCLUDE
@@ -34,11 +25,11 @@ Shader "Custom/SnowShader" {
     #include "Tessellation.cginc"
 
     #pragma require tessellation tessHW
-    #pragma vertex TessellationVertexProgram
+    #pragma vertex CalculateTesellation
     #pragma hull hull
     #pragma domain domain
 
-    ControlPoint TessellationVertexProgram(Attributes v)
+    ControlPoint CalculateTesellation(Attributes v)
     {
         ControlPoint p;
         p.vertex = v.vertex;
@@ -47,7 +38,7 @@ Shader "Custom/SnowShader" {
         p.color = v.color;
         return p;
     }
-    float4 HeightBlend3(float4 top, float4 middle, float4 bottom, float height, float range)
+    float4 BlendTexturesForHeight(float4 top, float4 middle, float4 bottom, float height, float range)
     {
         float topBlend = smoothstep(1.0 - range, 1.0, height);
         float middleBlend = smoothstep(0.5 - range, 0.5 + range, height);
@@ -68,8 +59,7 @@ Shader "Custom/SnowShader" {
             #pragma fragment frag
 
             sampler2D _Top_Albedo, _Middle_Albedo, _Bottom_Albedo;
-            float _Range, _TopStart, _MiddleStart;
-            float _DepthMax, _Offset;
+            float _Range;
             float _MinHeight, _MaxHeight;
 
             float4 frag(VertexSOutput IN) : SV_Target {
@@ -89,7 +79,7 @@ Shader "Custom/SnowShader" {
                 float height = saturate((IN.worldPos.y - _MinHeight) / (_MaxHeight - _MinHeight));
 
                 // Ajustar la mezcla de texturas
-                float4 blended = HeightBlend3(
+                float4 blended = BlendTexturesForHeight(
                     topAlbedo, 
                     middleAlbedo, 
                     bottomAlbedo, 

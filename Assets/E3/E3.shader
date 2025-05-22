@@ -49,14 +49,6 @@ Shader "Custom/E3"
             float4 screenPos;
         };
         
-        float DepthFactor(float4 screenPos)
-        {
-            float2 uv = screenPos.xy / screenPos.w;
-            float sceneDepth = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv));
-            float surfaceDepth = UNITY_Z_0_FAR_FROM_CLIPSPACE(screenPos.z);
-            return saturate((sceneDepth - surfaceDepth) / _DepthFadeDistance);
-        }
-
         void vert(inout appdata_full v, out Input o)
         {
             UNITY_INITIALIZE_OUTPUT(Input, o);

@@ -5,15 +5,15 @@ Shader "Custom/E1"
         _BaseTexture("Base Texture", 2D) = "white" {}
         [HDR] _TintColor("Tint Color", Color) = (1, 1, 1, 1)
 
-        _ScanSpeed("Scanline Scroll Speed", Float) = -0.1
-        _ScanDensity("Scanline Density", Float) = 50
+        _ScanSpeed("Scanline Scroll Speed", Float) = 1
+        _ScanDensity("Scanline Density", Float) = 1
 
-        _FresnelExponent("Fresnel Power", Float) = 5
+        _FresnelExponent("Fresnel Power", Float) = 1
 
-        _DepthBlendAmount("Depth Blend", Float) = 0.5
+        _DepthBlendAmount("Depth Blend", Float) = 1
         _IntersectWidth("Intersection Width", Float) = 1
 
-        _HexScrollSpeed("Hexagon Scroll Speed", Range(0, 0.3)) = 0.1
+        _HexScrollSpeed("Hexagon Scroll Speed", Float) = 1
     }
 
     SubShader
@@ -31,27 +31,27 @@ Shader "Custom/E1"
         Pass
         {
             CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
+            #pragma vertex CalculateVertexOutput
+            #pragma fragment CalculateFragmentOutput
 
             #include "UnityCG.cginc"
 
             sampler2D _CameraDepthTexture;
 
-            struct VertexInput
+            struct VertexShaderInput
             {
-                float4 pos : POSITION;
-                float2 texcoord : TEXCOORD0;
-                float3 norm : NORMAL;
+                float4 vertexPositionOS : POSITION;
+                float2 baseUV : TEXCOORD0;
+                float3 normalOS : NORMAL;
             };
 
-            struct VertexOutput
+            struct VertexShaderOutput
             {
-                float4 pos : SV_POSITION;
-                float2 uv : TEXCOORD0;
-                float3 worldNorm : TEXCOORD1;
-                float3 viewDirection : TEXCOORD2;
-                float4 screenPos : TEXCOORD3;
+                float4 vertexPositionCS : SV_POSITION;
+                float2 baseUV : TEXCOORD0;
+                float3 worldNormal : TEXCOORD1;
+                float3 viewVector : TEXCOORD2;
+                float4 screenPosition : TEXCOORD3;
             };
 
             sampler2D _BaseTexture;
@@ -64,84 +64,71 @@ Shader "Custom/E1"
             float _IntersectWidth;
             float _HexScrollSpeed;
 
-            // Calculates the Fresnel effect based on normal and view direction
-            float ComputeFresnelTerm(float3 norm, float3 viewDir, float power)
+            float ComputeFresnel(float3 normalWS, float3 viewWS, float exponent)
             {
-                float facing = dot(norm, viewDir);
-                facing = saturate(1.0 - facing);
-                return pow(facing, power);
+                float dotResult = dot(normalWS, viewWS);
+                dotResult = saturate(1.0 - dotResult);
+                return pow(dotResult, exponent);
             }
 
-            // Samples linear eye depth from camera depth texture
-            float SampleLinearDepth(float2 uv, sampler2D depthTex)
+            float SampleSceneDepth(float2 uvCoords, sampler2D depthTex)
             {
-                float rawDepth = SAMPLE_DEPTH_TEXTURE(depthTex, uv);
+                float rawDepth = SAMPLE_DEPTH_TEXTURE(depthTex, uvCoords);
                 return LinearEyeDepth(rawDepth);
             }
 
-            // Soft light blend between two values A and B
-            float SoftLightBlend(float A, float B)
+            float BlendSoftLight(float baseValue, float blendValue)
             {
-                float cond1 = (1.0 - 2.0 * B) * (A * A) + 2.0 * A * B;
-                float cond2 = (2.0 * B - 1.0) * sqrt(A) + 2.0 * A * (1.0 - B);
-                return B < 0.5 ? cond1 : cond2;
+                float resultA = (1.0 - 2.0 * blendValue) * (baseValue * baseValue) + 2.0 * baseValue * blendValue;
+                float resultB = (2.0 * blendValue - 1.0) * sqrt(baseValue) + 2.0 * baseValue * (1.0 - blendValue);
+                return blendValue < 0.5 ? resultA : resultB;
             }
 
-            // Generates scanline pattern (returns 0 or 1)
-            float GenerateScanlines(float2 uv, float speed, float density)
+            float CreateScanlineMask(float2 uv, float scrollSpeed, float lineDensity)
             {
-                float linePos = frac(uv.y * density + speed * _Time.x);
-                return step(linePos, 0.7);
+                float linePattern = frac(uv.y * lineDensity + scrollSpeed * _Time.x);
+                return step(linePattern, 0.7);
             }
 
-            VertexOutput vert(VertexInput input)
+            VertexShaderOutput CalculateVertexOutput(VertexShaderInput input)
             {
-                VertexOutput output;
+                VertexShaderOutput output;
 
-                output.pos = UnityObjectToClipPos(input.pos);
-                output.uv = TRANSFORM_TEX(input.texcoord, _BaseTexture);
+                output.vertexPositionCS = UnityObjectToClipPos(input.vertexPositionOS);
+                output.baseUV = TRANSFORM_TEX(input.baseUV, _BaseTexture);
 
-                float3 worldPosition = mul(unity_ObjectToWorld, input.pos).xyz;
-                output.worldNorm = UnityObjectToWorldNormal(input.norm);
-                output.viewDirection = normalize(_WorldSpaceCameraPos - worldPosition);
+                float3 worldPosition = mul(unity_ObjectToWorld, input.vertexPositionOS).xyz;
+                output.worldNormal = UnityObjectToWorldNormal(input.normalOS);
+                output.viewVector = normalize(_WorldSpaceCameraPos - worldPosition);
 
-                output.screenPos = ComputeScreenPos(output.pos);
+                output.screenPosition = ComputeScreenPos(output.vertexPositionCS);
                 return output;
             }
 
-            fixed4 frag(VertexOutput input) : SV_Target
+            fixed4 CalculateFragmentOutput(VertexShaderOutput input) : SV_Target
             {
-                // Calculate screen UV coordinates for depth sampling
-                float2 screenUV = input.screenPos.xy / input.screenPos.w;
+                float2 sceneUV = input.screenPosition.xy / input.screenPosition.w;
 
-                // Get scene depth at this pixel
-                float sceneDepth = SampleLinearDepth(screenUV, _CameraDepthTexture);
-                float shieldDepth = input.screenPos.w;
+                float sceneLinearDepth = SampleSceneDepth(sceneUV, _CameraDepthTexture);
+                float fragmentDepth = input.screenPosition.w;
 
-                // Calculate intersection fade factor
-                float intersectionFactor = pow(saturate(1.0 - (sceneDepth - shieldDepth)), _FresnelExponent);
+                float intersectionFade = pow(saturate(1.0 - (sceneLinearDepth - fragmentDepth)), _FresnelExponent);
 
-                // Normalize vectors
-                float3 norm = normalize(input.worldNorm);
-                float3 viewDir = normalize(input.viewDirection);
+                float3 normalWS = normalize(input.worldNormal);
+                float3 viewWS = normalize(input.viewVector);
 
-                // Calculate fresnel effect term
-                float fresnelTerm = ComputeFresnelTerm(norm, viewDir, _FresnelExponent);
+                float fresnelFactor = ComputeFresnel(normalWS, viewWS, _FresnelExponent);
 
-                // UV movement for hexagon texture scrolling
-                float2 movingUV = frac(input.uv * float2(1.0, 1.0) + float2(0.0, _HexScrollSpeed * _Time.y));
+                float2 animatedUV = frac(input.baseUV * float2(1.0, 1.0) + float2(0.0, _HexScrollSpeed * _Time.y));
 
-                // Sample hexagon texture (assumed _BaseTexture)
-                float hexSample = tex2D(_BaseTexture, movingUV).r;
+                float hexTexValue = tex2D(_BaseTexture, animatedUV).r;
 
-                // Generate scanline pattern
-                float scanlinePattern = GenerateScanlines(input.uv, _ScanSpeed, _ScanDensity);
+                float scanline = CreateScanlineMask(input.baseUV, _ScanSpeed, _ScanDensity);
 
-                // Compose final color
-                fixed4 outputColor = _TintColor;
-                outputColor.a = SoftLightBlend(intersectionFactor + fresnelTerm, 1.0 - hexSample + scanlinePattern);
+                fixed4 finalColor = _TintColor;
+                finalColor.a = BlendSoftLight(intersectionFade + fresnelFactor, 1.0 - hexTexValue + scanline);
 
-                return outputColor;
+                return finalColor;
             }
 
             ENDCG
