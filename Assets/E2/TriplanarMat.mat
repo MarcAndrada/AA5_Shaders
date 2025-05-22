@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: E2
+  m_Name: TriplanarMat
   m_Shader: {fileID: 4800000, guid: 526c6265c2198044db08cad0a7a26d97, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -42,9 +42,9 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _BlendPower: 1
+    - _BlendPower: 0.7
     - _EnableEmission: 1
-    - _TextureScale: 0.93
+    - _TextureScale: 0.6
     m_Colors:
     - _ColorTint: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}

@@ -1,4 +1,4 @@
-Shader "Custom/E1"
+Shader "Custom/ShieldShader"
 {
     Properties
     {
@@ -64,6 +64,7 @@ Shader "Custom/E1"
             float _IntersectWidth;
             float _HexScrollSpeed;
 
+            // Cálculo del término de fresnel
             float ComputeFresnel(float3 normalWS, float3 viewWS, float exponent)
             {
                 float dotResult = dot(normalWS, viewWS);
@@ -71,12 +72,14 @@ Shader "Custom/E1"
                 return pow(dotResult, exponent);
             }
 
+            // Profundidad en espacio lineal desde la textura de profundidad de cámara
             float SampleSceneDepth(float2 uvCoords, sampler2D depthTex)
             {
                 float rawDepth = SAMPLE_DEPTH_TEXTURE(depthTex, uvCoords);
                 return LinearEyeDepth(rawDepth);
             }
 
+            // Blend tipo "soft light" entre dos valores
             float BlendSoftLight(float baseValue, float blendValue)
             {
                 float resultA = (1.0 - 2.0 * blendValue) * (baseValue * baseValue) + 2.0 * baseValue * blendValue;
@@ -84,12 +87,14 @@ Shader "Custom/E1"
                 return blendValue < 0.5 ? resultA : resultB;
             }
 
+            // Patrón animado de líneas horizontales
             float CreateScanlineMask(float2 uv, float scrollSpeed, float lineDensity)
             {
                 float linePattern = frac(uv.y * lineDensity + scrollSpeed * _Time.x);
                 return step(linePattern, 0.7);
             }
 
+            // Vertex shader: transforma y prepara datos para efectos visuales
             VertexShaderOutput CalculateVertexOutput(VertexShaderInput input)
             {
                 VertexShaderOutput output;
@@ -105,6 +110,7 @@ Shader "Custom/E1"
                 return output;
             }
 
+            // Fragment shader: mezcla profundidad, fresnel, textura y efectos visuales
             fixed4 CalculateFragmentOutput(VertexShaderOutput input) : SV_Target
             {
                 float2 sceneUV = input.screenPosition.xy / input.screenPosition.w;

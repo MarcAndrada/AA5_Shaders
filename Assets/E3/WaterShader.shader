@@ -1,17 +1,17 @@
-Shader "Custom/E3"
+Shader "Custom/WaterShader"
 {
     Properties
     {
         _Normals("Normal Map", 2D) = "bump" {}
-        _NormalsStrength("Normal Strength", Float) = 1.0
+        _NormalsStrength("Normal Strength", Float) = 1
 
         _FlowMap("Flow Map", 2D) = "white" {}
-        _FlowStrength("Flow Strength", Float) = 0.5
-        _Speed("Speed", Float) = 0.5
-        _DistortionStrength("Distortion Strength", Float) = 1.0
+        _FlowStrength("Flow Strength", Float) = 1
+        _Speed("Speed", Float) = 1
+        _DistortionStrength("Distortion Strength", Float) = 1
 
-        _DepthFadeDistance("Depth Fade Distance", Float) = 10.0
-        _DepthColor("Water Color", Color) = (0, 0.5, 0.7, 1)
+        _DepthFadeDistance("Depth Fade Distance", Float) = 15
+        _DepthColor("Water Color", Color) = (0, 0, 1, 1)
     }
 
     SubShader
